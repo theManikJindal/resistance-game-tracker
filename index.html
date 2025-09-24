@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resistance Game Tracker</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --text-color: #2c3e50;
+            --border-radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            background-color: #f5f6fa;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--primary-color);
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 1000px;
+            aspect-ratio: 1;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .player-circle {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 768px) {
+            .game-container {
+                aspect-ratio: auto;
+                min-height: 400px;
+                padding: 1rem;
+            }
+
+            .player-circle {
+                border: none;
+                border-radius: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                align-items: center;
+                padding: 1rem 0;
+            }
+        }
+
+        .center-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 50%;
+            z-index: 2;
+        }
+
+        @media (max-width: 768px) {
+            .center-content {
+                position: relative;
+                top: auto;
+                left: auto;
+                transform: none;
+                width: 90%;
+                max-width: 300px;
+                margin: 1rem auto;
+            }
+
+            body {
+                padding: 1rem;
+            }
+
+            .game-log {
+                padding: 0;
+            }
+
+            /* Adjust for very small screens */
+            @media (max-width: 480px) {
+                .vote-toggle {
+                    width: 50px;
+                    font-size: 0.875rem;
+                    padding: 0.5rem;
+                    min-height: 36px;
+                }
+
+                .player-box {
+                    font-size: 0.875rem;
+                    padding: 0.75rem;
+                }
+            }
+        }
+
+        .center-content p {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 1rem 0;
+            color: var(--primary-color);
+        }
+
+        .player-box {
+            position: absolute;
+            background: white;
+            padding: 1.15rem;
+            border-radius: var(--border-radius);
+            border: 2px solid var(--primary-color);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+            min-width: 138px;
+            text-align: center;
+            z-index: 1;
+        }
+
+        @media (max-width: 768px) {
+            .player-box-container {
+                position: relative;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 0.5rem;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .player-box-wrapper {
+                display: flex;
+                flex-direction: row;
+                align-items: stretch;
+                gap: 0.5rem;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .reorder-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .reorder-button {
+                padding: 0.25rem;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: var(--border-radius);
+                cursor: pointer;
+                font-size: 1rem;
+                line-height: 1;
+            }
+
+            .reorder-button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .player-box {
+                position: relative;
+                width: auto;
+                min-width: 120px;
+                left: auto !important;
+                top: auto !important;
+                transform: none !important;
+                display: flex;
+                align-items: center;
+                margin: 0;
+                flex-shrink: 1;
+            }
+
+            .vote-toggle {
+                position: static;
+                transform: none;
+                width: 70px;
+                height: auto;
+                padding: 0.86rem;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        /* Desktop Vote Toggle */
+        @media (min-width: 769px) {
+            .vote-toggle {
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+                top: 100%;
+                margin-top: 0.5rem;
+                color: white;
+                padding: 0.86rem 1.73rem;
+                border-radius: var(--border-radius);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                z-index: 3;
+                border: none;
+                cursor: pointer;
+                font-size: 1rem;
+                min-width: 138px;
+                text-align: center;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                font-weight: normal;
+            }
+        }
+
+        /* Mobile Vote Toggle */
+        @media (max-width: 768px) {
+            .vote-toggle {
+                color: white;
+                padding: 0.86rem 1.73rem;
+                border-radius: var(--border-radius);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                border: none;
+                cursor: pointer;
+                font-size: 1rem;
+                min-width: 70px;
+                text-align: center;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                font-weight: normal;
+                margin-left: 0.5rem;
+            }
+        }
+
+        /* Override any inherited hover effects */
+        .vote-toggle:hover {
+            background: inherit;
+        }
+
+        .vote-toggle.rejected:hover {
+            background: var(--danger-color);
+        }
+
+        .vote-toggle.approved:hover {
+            background: var(--success-color);
+        }
+
+        .vote-toggle.rejected {
+            background: var(--danger-color);
+        }
+
+        .vote-toggle.approved {
+            background: var(--success-color);
+        }
+
+
+        .player-box.dragging {
+            opacity: 0.5;
+            transform: scale(1.05);
+            z-index: 2;
+        }
+
+        .player-box.drag-over {
+            background-color: #f0f9ff;
+            border-color: var(--secondary-color);
+            transform: scale(1.05);
+        }
+
+        .player-box.selected {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .player-box.leader::after {
+            content: '👑';
+            position: absolute;
+            top: -20px;
+            left: -15px;
+            font-size: 1.5em;
+            transform: rotate(-15deg);
+        }
+
+        .remove-player {
+            position: absolute;
+            top: -1px;
+            right: -1px;
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 0 var(--border-radius) 0 var(--border-radius);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+
+        .remove-player:hover {
+            background-color: #c0392b;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"] {
+            padding: 0.5rem;
+            border: 2px solid var(--primary-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .primary-button, button:not(.secondary-button) {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .primary-button:hover, button:not(.secondary-button):hover {
+            background-color: #2980b9;
+        }
+
+        .success-button {
+            background-color: var(--success-color) !important;
+        }
+
+        .success-button:hover {
+            background-color: #27ae60 !important;
+        }
+
+        .danger-button {
+            background-color: var(--danger-color) !important;
+        }
+
+        .danger-button:hover {
+            background-color: #c0392b !important;
+        }
+
+        .secondary-button {
+            background-color: #ecf0f1;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .secondary-button:hover {
+            background-color: #bdc3c7;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            color: #7f8c8d;
+            cursor: not-allowed;
+            border: none;
+        }
+
+        .voting-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 1rem;
+            min-height: 300px; /* Reserve space for the button */
+        }
+
+        .vote-controls {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            align-items: center;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .vote-controls span {
+            min-width: 100px;
+            text-align: right;
+            font-size: 1.2rem;
+        }
+
+        .vote-options {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .vote-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .vote-option input[type="radio"] {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .vote-option label {
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .number-input {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .number-input .controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .number-input button {
+            min-width: 30px;
+            height: 30px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .number-input button.submit-button {
+            min-width: 80px;
+            height: auto;
+            padding: 0.5rem 1rem;
+        }
+
+        .number-input input {
+            width: 60px;
+            text-align: center;
+            padding: 0.25rem;
+            border: 1px solid var(--primary-color);
+            border-radius: var(--border-radius);
+        }
+
+        .game-log {
+            margin-top: 2rem;
+            width: 100%;
+            max-width: 800px;
+            padding: 1rem;
+        }
+
+        .game-log h2 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .round-log {
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            transition: background-color 0.3s ease;
+        }
+
+        .round-log.rejected {
+            background: #e9ecef;
+        }
+
+        .round-log.mission-success {
+            background: #d4edda;
+        }
+
+        .round-log.mission-fail {
+            background: #f8d7da;
+        }
+
+        .round-log h3 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .round-log ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .round-log li {
+            margin: 0.5rem 0;
+            line-height: 1.4;
+        }
+
+        .round-log .team-members {
+            font-weight: bold;
+        }
+
+        .round-log .vote-result {
+            font-weight: bold;
+        }
+
+        .round-log .mission-result {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .round-log ul ul {
+            margin: 0.5rem 0;
+        }
+
+        .round-log ul ul li {
+            margin: 0.25rem 0;
+            line-height: 1.6;
+        }
+
+        .round-log strong {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="phase-heading">Setup Phase</h1>
+    <div class="game-container">
+        <div class="player-circle" id="player-circle"></div>
+        <div class="center-content" id="center-content">
+            <div class="input-group">
+                <input type="text" id="player-name" placeholder="Enter player name">
+                <button id="add-player">Add Player</button>
+            </div>
+        </div>
+    </div>
+    <div class="game-log" id="game-log">
+        <h2>Game Log</h2>
+    </div>
+    <div class="deductions" id="deductions">
+        <h2>Spy Deductions</h2>
+        <div class="deductions-content"></div>
+    </div>
+
+    <style>
+        .deductions {
+            margin: 2rem auto;
+            max-width: 800px;
+            padding: 1rem;
+        }
+
+        .deductions h2 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .deduction-group {
+            background: #f5f5f5;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .deduction-group .players {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .spy-combinations-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .spy-combinations-table th,
+        .spy-combinations-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .spy-combinations-table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+
+        .spy-combinations-table tr.possible {
+            background: #f8fff8;
+        }
+
+        .spy-combinations-table tr.impossible {
+            background: #fff8f8;
+            color: #666;
+        }
+
+        .spy-combinations-table tr.possible td:nth-child(2) {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .spy-combinations-table tr.impossible td:nth-child(2) {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+
+        .spy-combinations-table tr.impossible td:last-child {
+            font-style: italic;
+            color: #666;
+        }
+
+        .spy-filter {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .spy-filter h3 {
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+            font-size: 1rem;
+        }
+
+        .player-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .player-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f5f5f5;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .player-checkbox:hover {
+            background: #ebebeb;
+        }
+
+        .player-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+    </style>
+
+    <script>
+        // Game State
+        const gameState = {
+            phase: 'setup',
+            players: [],
+            leader: null,
+            currentMission: 1,
+            currentTeam: 1,
+            selectedTeam: new Set(),
+            votes: {},
+            missionResults: [],
+            roundHistory: [],
+            isVoting: false,
+            impossibleSpyGroups: [] // Store groups that can't all be spies
+        };
+
+        // Get number of spies based on player count
+        function getSpyCount(playerCount) {
+            const spyCounts = {
+                5: 2, 6: 2,
+                7: 3, 8: 3,
+                9: 4, 10: 4
+            };
+            return spyCounts[playerCount] || 0;
+        }
+
+        // Generate all possible combinations of k items from an array
+        function getCombinations(arr, k) {
+            const results = [];
+            
+            function backtrack(start, combo) {
+                if (combo.length === k) {
+                    results.push([...combo]);
+                    return;
+                }
+                
+                for (let i = start; i < arr.length; i++) {
+                    combo.push(arr[i]);
+                    backtrack(i + 1, combo);
+                    combo.pop();
+                }
+            }
+            
+            backtrack(0, []);
+            return results;
+        }
+
+        // Calculate spy combinations and their possibility
+        function calculateSpyPossibilities() {
+            const spyCount = getSpyCount(gameState.players.length);
+            if (!spyCount || gameState.phase === 'setup') return null;
+
+            // Get all possible spy combinations
+            const allCombinations = getCombinations(gameState.players, spyCount);
+            
+            // Check each combination against mission results
+            return allCombinations.map(spyCombo => {
+                let isPossible = true;
+                let reason = '';
+
+                // Check each mission result
+                gameState.roundHistory.forEach(round => {
+                    if (!round.approved || round.fails === null) return;
+
+                    // Count how many spies were on this mission
+                    const spiesOnMission = round.proposedTeam.filter(player => 
+                        spyCombo.includes(player)
+                    ).length;
+
+                    // If we see X fails, there must be at least X spies on the team
+                    if (round.fails > 0 && spiesOnMission < round.fails) {
+                        isPossible = false;
+                        reason = `Mission ${round.mission}: Had ${round.fails} fails but this combination only has ${spiesOnMission} spies on the team`;
+                    }
+                });
+
+                return {
+                    spies: spyCombo,
+                    possible: isPossible,
+                    reason: reason
+                };
+            });
+        }
+
+        // Mission requirements for different player counts
+        const missionRequirements = {
+            5: [2, 3, 2, 3, 3],
+            6: [2, 3, 4, 3, 4],
+            7: [2, 3, 3, 4, 4],
+            8: [3, 4, 4, 5, 5],
+            9: [3, 4, 4, 5, 5],
+            10: [3, 4, 4, 5, 5]
+        };
+
+        // DOM Elements
+        const playerCircle = document.getElementById('player-circle');
+        const centerContent = document.getElementById('center-content');
+        const phaseHeading = document.getElementById('phase-heading');
+
+        // Initialize drag and drop
+        let draggedElement = null;
+
+        // Save game state to local storage
+        function saveGameState() {
+            // Convert Set to Array for storage
+            const stateToSave = {
+                ...gameState,
+                selectedTeam: Array.from(gameState.selectedTeam)
+            };
+            localStorage.setItem('resistanceGameState', JSON.stringify(stateToSave));
+        }
+
+        // Load game state from local storage
+        function loadGameState() {
+            const savedState = localStorage.getItem('resistanceGameState');
+            if (savedState) {
+                const parsedState = JSON.parse(savedState);
+                // Ensure selectedTeam is always a Set
+                parsedState.selectedTeam = new Set(Array.isArray(parsedState.selectedTeam) ? parsedState.selectedTeam : []);
+                Object.assign(gameState, parsedState);
+                renderGame();
+            }
+        }
+
+        // Calculate positions for player boxes in a circle
+        function calculatePlayerPosition(index, total) {
+            const radius = playerCircle.offsetWidth * 0.4;
+            const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
+            const x = radius * Math.cos(angle);
+            const y = radius * Math.sin(angle);
+            return {
+                left: `calc(50% + ${x}px - 60px)`,
+                top: `calc(50% + ${y}px - 25px)`
+            };
+        }
+
+        // Render player boxes
+        function renderPlayers() {
+            playerCircle.innerHTML = '';
+            gameState.players.forEach((player, index) => {
+                const playerBox = document.createElement('div');
+                playerBox.className = 'player-box';
+                if (player === gameState.leader) playerBox.classList.add('leader');
+                if (gameState.selectedTeam.has(player)) playerBox.classList.add('selected');
+                
+                playerBox.textContent = player;
+                const position = calculatePlayerPosition(index, gameState.players.length);
+                playerBox.style.left = position.left;
+                playerBox.style.top = position.top;
+
+                if (gameState.phase === 'setup') {
+                    const removeButton = document.createElement('button');
+                    removeButton.className = 'remove-player';
+                    removeButton.textContent = '×';
+                    removeButton.onclick = (e) => {
+                        e.stopPropagation();
+                        removePlayer(player);
+                    };
+                    playerBox.appendChild(removeButton);
+
+                    // Setup drag and drop
+                    playerBox.draggable = true;
+                    playerBox.dataset.playerName = player; // Store player name in dataset
+                    
+                    playerBox.ondragstart = (e) => {
+                        draggedElement = e.target;
+                        e.target.classList.add('dragging');
+                        e.dataTransfer.setData('text/plain', player);
+                    };
+                    
+                    playerBox.ondragend = (e) => {
+                        e.target.classList.remove('dragging');
+                        document.querySelectorAll('.player-box').forEach(box => {
+                            box.classList.remove('drag-over');
+                        });
+                    };
+                    
+                    playerBox.ondragover = (e) => {
+                        e.preventDefault();
+                        e.target.closest('.player-box').classList.add('drag-over');
+                    };
+                    
+                    playerBox.ondragleave = (e) => {
+                        e.target.closest('.player-box').classList.remove('drag-over');
+                    };
+                    
+                    playerBox.ondrop = (e) => {
+                        e.preventDefault();
+                        const dropTarget = e.target.closest('.player-box');
+                        dropTarget.classList.remove('drag-over');
+                        
+                        if (draggedElement && draggedElement !== dropTarget) {
+                            const draggedPlayer = draggedElement.dataset.playerName;
+                            const targetPlayer = dropTarget.dataset.playerName;
+                            
+                            const fromIndex = gameState.players.indexOf(draggedPlayer);
+                            const toIndex = gameState.players.indexOf(targetPlayer);
+                            
+                            if (fromIndex !== -1 && toIndex !== -1) {
+                                // Swap the players
+                                [gameState.players[fromIndex], gameState.players[toIndex]] = 
+                                [gameState.players[toIndex], gameState.players[fromIndex]];
+                                saveGameState();
+                                savePlayerNames(); // Save the new player order
+                                renderPlayers();
+                            }
+                        }
+                    };
+                }
+
+                playerBox.onclick = (e) => {
+                    // Don't handle click if it's on the voting controls or if we're in voting phase
+                    if (e.target.closest('.player-vote-controls') || gameState.isVoting) return;
+                    handlePlayerClick(player);
+                };
+
+                // For mobile view, wrap player box in a container with reorder buttons
+                if (window.innerWidth <= 768) {
+                    // Mobile View
+                    const container = document.createElement('div');
+                    container.className = 'player-box-container';
+
+                    // Add reorder buttons in setup phase
+                    if (gameState.phase === 'setup') {
+                        const reorderButtons = document.createElement('div');
+                        reorderButtons.className = 'reorder-buttons';
+                        
+                        const upButton = document.createElement('button');
+                        upButton.className = 'reorder-button';
+                        upButton.innerHTML = '↑';
+                        upButton.disabled = index === 0;
+                        upButton.onclick = (e) => {
+                            e.stopPropagation();
+                            if (index > 0) {
+                                [gameState.players[index], gameState.players[index - 1]] = 
+                                [gameState.players[index - 1], gameState.players[index]];
+                                saveGameState();
+                                savePlayerNames();
+                                renderPlayers();
+                            }
+                        };
+
+                        const downButton = document.createElement('button');
+                        downButton.className = 'reorder-button';
+                        downButton.innerHTML = '↓';
+                        downButton.disabled = index === gameState.players.length - 1;
+                        downButton.onclick = (e) => {
+                            e.stopPropagation();
+                            if (index < gameState.players.length - 1) {
+                                [gameState.players[index], gameState.players[index + 1]] = 
+                                [gameState.players[index + 1], gameState.players[index]];
+                                saveGameState();
+                                savePlayerNames();
+                                renderPlayers();
+                            }
+                        };
+
+                        reorderButtons.appendChild(upButton);
+                        reorderButtons.appendChild(downButton);
+                        container.appendChild(reorderButtons);
+                    }
+
+                    // Add player box and vote toggle in a wrapper
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'player-box-wrapper';
+                    wrapper.appendChild(playerBox);
+
+                    if (gameState.isVoting) {
+                        const voteToggle = createVoteToggle(player);
+                        wrapper.appendChild(voteToggle);
+                    }
+
+                    container.appendChild(wrapper);
+                    playerCircle.appendChild(container);
+                } else {
+                    // Desktop View
+                    playerCircle.appendChild(playerBox);
+                    
+                    if (gameState.isVoting) {
+                        const voteToggle = createVoteToggle(player);
+                        playerBox.appendChild(voteToggle);
+                    }
+                }
+            });
+        }
+
+        // Handle player box clicks based on game phase
+        function handlePlayerClick(player) {
+            if (gameState.phase === 'setup') {
+                if (gameState.leader === player) {
+                    gameState.leader = null;
+                } else {
+                    gameState.leader = player;
+                }
+            } else if (gameState.phase === 'play' && !gameState.isVoting) {
+                const requiredTeamSize = missionRequirements[gameState.players.length][gameState.currentMission - 1];
+                if (gameState.selectedTeam.has(player)) {
+                    gameState.selectedTeam.delete(player);
+                } else if (gameState.selectedTeam.size < requiredTeamSize) {
+                    gameState.selectedTeam.add(player);
+                }
+            }
+            saveGameState();
+            renderGame();
+        }
+
+        // Add a new player
+        function addPlayer(name) {
+            if (name && gameState.players.length < 10 && !gameState.players.includes(name)) {
+                gameState.players.push(name);
+                saveGameState();
+                savePlayerNames();
+                renderGame();
+                // Clear the input field and focus back on it
+                const input = document.getElementById('player-name');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+            }
+        }
+
+        // Remove a player
+        function removePlayer(name) {
+            const index = gameState.players.indexOf(name);
+            if (index > -1) {
+                gameState.players.splice(index, 1);
+                if (gameState.leader === name) {
+                    gameState.leader = null;
+                }
+                saveGameState();
+                savePlayerNames();
+                renderGame();
+            }
+        }
+
+        // Start the game
+        function startGame() {
+            if (gameState.players.length >= 5 && gameState.leader) {
+                gameState.phase = 'play';
+                gameState.currentMission = 1;
+                gameState.currentTeam = 1;
+                gameState.selectedTeam = new Set();
+                gameState.roundHistory = []; // Clear the game log
+                saveGameState();
+                renderGame();
+                renderGameLog(); // Re-render the empty game log
+            }
+        }
+
+        // Update center content based on game state
+        function updateCenterContent() {
+            centerContent.innerHTML = '';
+            if (gameState.phase === 'setup') {
+                // Create input group if we're in setup phase and have less than 10 players
+                if (gameState.players.length < 10) {
+                    const inputGroup = document.createElement('div');
+                    inputGroup.className = 'input-group';
+                    inputGroup.innerHTML = `
+                        <input type="text" id="player-name" placeholder="Enter player name">
+                        <button id="add-player">Add Player</button>
+                    `;
+                    centerContent.appendChild(inputGroup);
+                }
+
+                if (gameState.players.length >= 5) {
+                    if (!gameState.leader) {
+                        const leaderText = document.createElement('p');
+                        leaderText.textContent = 'Select leader';
+                        centerContent.appendChild(leaderText);
+                    }
+
+                    if (gameState.leader) {
+                        const startButton = document.createElement('button');
+                        startButton.textContent = 'Start Game';
+                        startButton.onclick = startGame;
+                        startButton.className = 'primary-button';
+                        centerContent.appendChild(startButton);
+
+                        // Make add player button secondary if it exists
+                        const addPlayerButton = document.getElementById('add-player');
+                        if (addPlayerButton) {
+                            addPlayerButton.className = 'secondary-button';
+                        }
+                    } else {
+                        // Ensure add player button is primary when no leader is selected
+                        const addPlayerButton = document.getElementById('add-player');
+                        if (addPlayerButton) {
+                            addPlayerButton.className = 'primary-button';
+                        }
+                    }
+                }
+            } else if (gameState.phase === 'play') {
+                const requiredTeamSize = missionRequirements[gameState.players.length][gameState.currentMission - 1];
+                const failsNeeded = gameState.players.length >= 7 && gameState.currentMission === 4 ? 2 : 1;
+                
+                centerContent.innerHTML = `
+                    <p>Select team of ${requiredTeamSize} players. ${failsNeeded} fails needed</p>
+                `;
+
+                if (gameState.selectedTeam.size === requiredTeamSize) {
+                    const voteButton = document.createElement('button');
+                    voteButton.textContent = 'Vote on team';
+                    voteButton.onclick = () => {
+                        gameState.votes = {};
+                        gameState.isVoting = true;
+                        saveGameState();
+                        renderVotingControls();
+                    };
+                    centerContent.appendChild(voteButton);
+                }
+            }
+        }
+
+        // Create vote toggle button
+        function createVoteToggle(player) {
+            const voteToggle = document.createElement('button');
+            // Default to reject (✗)
+            gameState.votes[player] = gameState.votes[player] || '✗';
+            voteToggle.innerHTML = `${gameState.votes[player]} ${gameState.votes[player] === '✓' ? 'Approve' : 'Reject'}`;
+            // Set initial class based on vote
+            voteToggle.className = `vote-toggle ${gameState.votes[player] === '✓' ? 'approved' : 'rejected'}`;
+
+            voteToggle.onclick = (e) => {
+                e.stopPropagation(); // Prevent click from reaching the player box
+                const newVote = gameState.votes[player] === '✗' ? '✓' : '✗';
+                gameState.votes[player] = newVote;
+                voteToggle.innerHTML = `${newVote} ${newVote === '✓' ? 'Approve' : 'Reject'}`;
+                voteToggle.className = `vote-toggle ${newVote === '✓' ? 'approved' : 'rejected'}`;
+                checkVotes();
+            };
+
+            return voteToggle;
+        }
+
+        // Render voting controls
+        function renderVotingControls() {
+            centerContent.innerHTML = '<p>Enter votes</p>';
+            
+            // Initialize all votes to cross
+            gameState.players.forEach(player => {
+                if (!gameState.votes[player]) {
+                    gameState.votes[player] = '✗';
+                }
+            });
+
+            // Re-render players to show vote controls
+            renderPlayers();
+
+            // Add finalize button container to center
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.marginTop = '2rem';
+            centerContent.appendChild(buttonContainer);
+
+            // Check if all votes are in
+            checkVotes();
+        }
+
+        // Check if all votes are in and show finalize button
+        function checkVotes() {
+            const buttonContainer = centerContent.querySelector('div');
+            if (!buttonContainer) return;
+
+            if (Object.keys(gameState.votes).length === gameState.players.length) {
+                const approvalVotes = Object.values(gameState.votes).filter(v => v === '✓').length;
+                const majority = Math.floor(gameState.players.length / 2) + 1;
+                const hasApproval = approvalVotes >= majority;
+
+                const finalizeButton = document.createElement('button');
+                finalizeButton.textContent = `Finalize Votes (${approvalVotes}/${gameState.players.length})`;
+                finalizeButton.onclick = finalizeVotes;
+                finalizeButton.className = hasApproval ? 'primary-button success-button' : 'primary-button danger-button';
+                
+                const existingButton = buttonContainer.querySelector('button');
+                if (existingButton) {
+                    existingButton.replaceWith(finalizeButton);
+                } else {
+                    buttonContainer.appendChild(finalizeButton);
+                }
+            }
+        }
+
+        // Add round to history
+        function addToHistory(approved, fails = null) {
+            const roundLog = {
+                mission: gameState.currentMission,
+                team: gameState.currentTeam,
+                leader: gameState.leader,
+                proposedTeam: Array.from(gameState.selectedTeam),
+                votes: {...gameState.votes},
+                approved: approved,
+                fails: fails
+            };
+            gameState.roundHistory.push(roundLog);
+            renderGameLog();
+        }
+
+        // Render spy deductions
+        function renderDeductions() {
+            const deductionsContent = document.querySelector('.deductions-content');
+            deductionsContent.innerHTML = '';
+
+            const spyPossibilities = calculateSpyPossibilities();
+            if (!spyPossibilities) {
+                deductionsContent.innerHTML = '<p>Game has not started yet.</p>';
+                return;
+            }
+
+            // Create filter section
+            const filterSection = document.createElement('div');
+            filterSection.className = 'spy-filter';
+            filterSection.innerHTML = `
+                <h3>Filter by Player</h3>
+                <div class="player-checkboxes">
+                    ${gameState.players.map(player => `
+                        <label class="player-checkbox">
+                            <input type="checkbox" value="${player}">
+                            ${player}
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+
+            // Add filter event listeners
+            const checkboxes = filterSection.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    // Get all checked players
+                    const checkedPlayers = Array.from(checkboxes)
+                        .filter(cb => cb.checked)
+                        .map(cb => cb.value);
+
+                    // Show/hide rows based on filters
+                    const rows = table.querySelectorAll('tr:not(:first-child)');
+                    rows.forEach(row => {
+                        const spies = row.querySelector('td').textContent.split(', ');
+                        // Show row if no filters are active or if all checked players are in the spy group
+                        const showRow = checkedPlayers.length === 0 || 
+                            checkedPlayers.every(player => spies.includes(player));
+                        row.style.display = showRow ? '' : 'none';
+                    });
+                });
+            });
+
+            deductionsContent.appendChild(filterSection);
+
+            // Create table
+            const table = document.createElement('table');
+            table.className = 'spy-combinations-table';
+            
+            // Add header
+            const header = document.createElement('tr');
+            header.innerHTML = `
+                <th>Potential Spies</th>
+                <th>Possible?</th>
+                <th>Reason if Impossible</th>
+            `;
+            table.appendChild(header);
+
+            // Add combinations
+            spyPossibilities.forEach(combo => {
+                const row = document.createElement('tr');
+                row.className = combo.possible ? 'possible' : 'impossible';
+                row.innerHTML = `
+                    <td>${combo.spies.join(', ')}</td>
+                    <td>${combo.possible ? '✓' : '✗'}</td>
+                    <td>${combo.reason}</td>
+                `;
+                table.appendChild(row);
+            });
+
+            deductionsContent.appendChild(table);
+        }
+
+        // Render game log
+        function renderGameLog() {
+            const gameLog = document.getElementById('game-log');
+            gameLog.innerHTML = '<h2>Game Log</h2>';
+
+            gameState.roundHistory.forEach(round => {
+                const roundDiv = document.createElement('div');
+                // Determine the appropriate class based on the round outcome
+                let roundClass = 'round-log';
+                if (!round.approved) {
+                    roundClass += ' rejected';
+                } else if (round.fails !== null) {
+                    // For completed missions, check if fails met or exceeded the requirement
+                    const failsNeeded = gameState.players.length >= 7 && round.mission === 4 ? 2 : 1;
+                    roundClass += round.fails >= failsNeeded ? ' mission-fail' : ' mission-success';
+                }
+                roundDiv.className = roundClass;
+                
+                roundDiv.innerHTML = `
+                    <h3>Mission #${round.mission} - Team #${round.team}</h3>
+                    <ul>
+                        <li>Leader: <strong>${round.leader}</strong></li>
+                        <li>Proposed Team: <span class="team-members">${round.proposedTeam.join(', ')}</span></li>
+                        <li>Votes:
+                            <ul>
+                                <li>Approved (✓): <strong>${Object.entries(round.votes)
+                                    .filter(([_, vote]) => vote === '✓')
+                                    .map(([player]) => player)
+                                    .join(', ') || 'None'}</strong></li>
+                                <li>Rejected (✗): <strong>${Object.entries(round.votes)
+                                    .filter(([_, vote]) => vote === '✗')
+                                    .map(([player]) => player)
+                                    .join(', ') || 'None'}</strong></li>
+                            </ul>
+                        </li>
+                        <li>Result: <span class="vote-result ${round.approved ? 'approved' : 'rejected'}">${round.approved ? 'APPROVED' : 'REJECTED'}</span></li>
+                        ${round.approved && round.fails !== null ? 
+                            `<li class="mission-result">Mission fails: <strong>${round.fails}</strong></li>` : 
+                            ''}
+                    </ul>
+                `;
+                
+                gameLog.appendChild(roundDiv);
+            });
+        }
+
+        // Finalize votes and proceed with the game
+        function finalizeVotes() {
+            const approvalVotes = Object.values(gameState.votes).filter(v => v === '✓').length;
+            const majority = Math.floor(gameState.players.length / 2) + 1;
+            const approved = approvalVotes >= majority;
+
+            addToHistory(approved);
+
+            if (approved) {
+                renderMissionInput();
+            } else {
+                // Reset for next team selection
+                gameState.currentTeam++;
+                gameState.selectedTeam.clear();
+                gameState.votes = {};
+                gameState.isVoting = false;  // Allow team selection again
+                // Change leader to next player in clockwise order
+                gameState.leader = getNextLeader();
+                saveGameState();
+                renderGame();
+            }
+        }
+
+        // Render mission input controls
+        function renderMissionInput() {
+            const requiredTeamSize = missionRequirements[gameState.players.length][gameState.currentMission - 1];
+            
+            centerContent.innerHTML = `
+                <p>Enter number of fails</p>
+                <div class="number-input">
+                    <div class="controls">
+                        <button onclick="adjustFails(-1)">-</button>
+                        <input type="number" id="fails-input" value="0" min="0" max="${requiredTeamSize}" readonly>
+                        <button onclick="adjustFails(1)">+</button>
+                    </div>
+                    <button onclick="submitMissionResult()" class="submit-button primary-button">Submit</button>
+                </div>
+            `;
+        }
+
+        // Adjust fails count
+        function adjustFails(delta) {
+            const input = document.getElementById('fails-input');
+            const newValue = Math.max(0, Math.min(parseInt(input.value) + delta, parseInt(input.max)));
+            input.value = newValue;
+        }
+
+        // Get next player in clockwise order
+        function getNextLeader() {
+            const currentLeaderIndex = gameState.players.indexOf(gameState.leader);
+            // If for some reason leader is not found, start with first player
+            if (currentLeaderIndex === -1) return gameState.players[0];
+            // Get next player, wrapping around to the start if needed
+            const nextIndex = (currentLeaderIndex + 1) % gameState.players.length;
+            return gameState.players[nextIndex];
+        }
+
+        // Submit mission result
+        function submitMissionResult() {
+            const fails = parseInt(document.getElementById('fails-input').value);
+            
+            // Update the last history entry with the mission result
+            const lastEntry = gameState.roundHistory[gameState.roundHistory.length - 1];
+            if (lastEntry && lastEntry.approved) {
+                lastEntry.fails = fails;
+                renderGameLog();
+                renderDeductions();
+            }
+
+            gameState.missionResults.push(fails);
+            gameState.currentMission++;
+            gameState.currentTeam = 1;
+            gameState.selectedTeam.clear();
+            gameState.votes = {};
+            gameState.isVoting = false;  // Allow team selection for next mission
+            
+            // Change leader to next player in clockwise order
+            gameState.leader = getNextLeader();
+
+            if (gameState.currentMission > 5) {
+                alert('Game Over!');
+                resetGame();
+            } else {
+                saveGameState();
+                renderGame();
+            }
+        }
+
+        // Save player names separately from game state
+        function savePlayerNames() {
+            localStorage.setItem('resistancePlayers', JSON.stringify(gameState.players));
+        }
+
+        // Load player names
+        function loadPlayerNames() {
+            const savedPlayers = localStorage.getItem('resistancePlayers');
+            if (savedPlayers) {
+                return JSON.parse(savedPlayers);
+            }
+            return [];
+        }
+
+        // Reset game but keep players
+        function resetGame() {
+            const savedPlayers = [...gameState.players];
+            // Reset to initial state
+            Object.assign(gameState, {
+                phase: 'setup',
+                players: savedPlayers,
+                leader: null,
+                currentMission: 1,
+                currentTeam: 0,
+                selectedTeam: new Set(),
+                votes: {},
+                missionResults: []
+            });
+            saveGameState();
+            savePlayerNames(); // Save players separately
+            renderGame();
+        }
+
+        // Main render function
+        function renderGame() {
+            phaseHeading.textContent = gameState.phase === 'setup' 
+                ? 'Setup Phase' 
+                : `Play - Mission#${gameState.currentMission} Team#${gameState.currentTeam}`;
+            
+            renderPlayers();
+            updateCenterContent();
+            setupEventListeners();
+            renderDeductions();
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            const addPlayerButton = document.getElementById('add-player');
+            const playerNameInput = document.getElementById('player-name');
+            
+            if (addPlayerButton && playerNameInput) {
+                // Remove any existing listeners first
+                const newAddPlayerButton = addPlayerButton.cloneNode(true);
+                const newPlayerNameInput = playerNameInput.cloneNode(true);
+                addPlayerButton.parentNode.replaceChild(newAddPlayerButton, addPlayerButton);
+                playerNameInput.parentNode.replaceChild(newPlayerNameInput, playerNameInput);
+                
+                // Add new listeners
+                newAddPlayerButton.addEventListener('click', () => {
+                    const input = document.getElementById('player-name');
+                    if (input) {
+                        addPlayer(input.value.trim());
+                    }
+                });
+
+                newPlayerNameInput.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter') {
+                        addPlayer(e.target.value.trim());
+                    }
+                });
+            }
+        }
+        
+        // Initial event listeners setup
+        setupEventListeners();
+
+        // Prevent accidental page refresh/close
+        window.onbeforeunload = () => {
+            if (gameState.phase === 'play') {
+                return 'Are you sure you want to leave? The game progress will be lost.';
+            }
+        };
+
+        // Initialize game with saved players or start fresh
+        const savedPlayers = loadPlayerNames();
+        if (savedPlayers.length > 0) {
+            gameState.players = savedPlayers;
+        }
+        localStorage.removeItem('resistanceGameState'); // Clear game progress but keep players
+        renderGame();
+    </script>
+</body>
+</html>
