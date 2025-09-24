@@ -666,26 +666,49 @@
             gap: 1rem;
         }
 
-        .player-checkbox {
+        .player-filter-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 1rem;
             padding: 0.5rem;
             background: #f5f5f5;
             border-radius: var(--border-radius);
-            cursor: pointer;
             user-select: none;
+        }
+
+        .player-name {
+            min-width: 100px;
+        }
+
+        .filter-radio-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .filter-radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--border-radius);
             transition: background-color 0.2s ease;
         }
 
-        .player-checkbox:hover {
-            background: #ebebeb;
+        .filter-radio-label:hover {
+            background: rgba(0, 0, 0, 0.05);
         }
 
-        .player-checkbox input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
+        .filter-radio-label.exclude {
+            color: var(--danger-color);
+        }
+
+        .filter-radio-label.include {
+            color: var(--secondary-color);
+        }
+
+        .filter-radio-label input[type="radio"] {
+            margin: 0;
         }
     </style>
 
@@ -762,6 +785,26 @@
                     if (round.fails > 0 && spiesOnMission < round.fails) {
                         isPossible = false;
                         reason = `Mission ${round.mission}: Had ${round.fails} fails but this combination only has ${spiesOnMission} spies on the team`;
+                    }
+
+                    // Special rule for 4th round in 7+ player games
+                    if (gameState.players.length >= 7 && 
+                        round.mission === 4 && 
+                        round.approved && 
+                        round.fails !== null && 
+                        round.fails < 2) {
+                        // Count spies in the team for this combination
+                        const spiesInTeam = round.proposedTeam.filter(player => 
+                            spyCombo.includes(player)
+                        ).length;
+                        
+                        // If this combination suggests 2 or more spies were on the team,
+                        // but we didn't get 2 fails, this combination is impossible
+                        // because spies would ALWAYS fail mission 4 if they could
+                        if (spiesInTeam >= 2) {
+                            isPossible = false;
+                            reason = `Mission 4: Team [${round.proposedTeam.join(', ')}] had less than 2 fails. This combination is impossible because it places ${spiesInTeam} spies on the team, and spies would always fail mission 4 if they had the opportunity (as it either gives them instant victory or sets up a guaranteed win on mission 5).`;
+                        }
                     }
                 });
 
@@ -1204,34 +1247,60 @@
                 <h3>Filter by Player</h3>
                 <div class="player-checkboxes">
                     ${gameState.players.map(player => `
-                        <label class="player-checkbox">
-                            <input type="checkbox" value="${player}">
-                            ${player}
-                        </label>
+                        <div class="player-filter-item">
+                            <span class="player-name">${player}</span>
+                            <div class="filter-radio-group">
+                                <label class="filter-radio-label exclude">
+                                    <input type="radio" name="filter-${player}" value="exclude">
+                                    Red
+                                </label>
+                                <label class="filter-radio-label">
+                                    <input type="radio" name="filter-${player}" value="neutral" checked>
+                                    Unknown
+                                </label>
+                                <label class="filter-radio-label include">
+                                    <input type="radio" name="filter-${player}" value="include">
+                                    Blue
+                                </label>
+                            </div>
+                        </div>
                     `).join('')}
                 </div>
             `;
 
             // Add filter event listeners
-            const checkboxes = filterSection.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', () => {
-                    // Get all checked players
-                    const checkedPlayers = Array.from(checkboxes)
-                        .filter(cb => cb.checked)
-                        .map(cb => cb.value);
-
-                    // Show/hide rows based on filters
-                    const rows = table.querySelectorAll('tr:not(:first-child)');
-                    rows.forEach(row => {
-                        const spies = row.querySelector('td').textContent.split(', ');
-                        // Show row if no filters are active or if all checked players are in the spy group
-                        const showRow = checkedPlayers.length === 0 || 
-                            checkedPlayers.every(player => spies.includes(player));
-                        row.style.display = showRow ? '' : 'none';
-                    });
+            const radioGroups = filterSection.querySelectorAll('.filter-radio-group');
+            
+            radioGroups.forEach(group => {
+                const radios = group.querySelectorAll('input[type="radio"]');
+                radios.forEach(radio => {
+                    radio.addEventListener('change', updateTableVisibility);
                 });
             });
+
+            function updateTableVisibility() {
+                const rows = table.querySelectorAll('tr:not(:first-child)');
+                
+                rows.forEach(row => {
+                    const spies = row.querySelector('td').textContent.split(', ');
+                    let showRow = true;
+
+                    // Check each player's radio selection
+                    gameState.players.forEach(player => {
+                        const selectedRadio = filterSection.querySelector(`input[name="filter-${player}"]:checked`);
+                        const state = selectedRadio.value;
+                        const isPlayerInCombo = spies.includes(player);
+
+                        if (state === 'include' && isPlayerInCombo) {
+                            showRow = false;  // Blue: hide if player IS in the combo
+                        } else if (state === 'exclude' && !isPlayerInCombo) {
+                            showRow = false;  // Red: hide if player is NOT in the combo
+                        }
+                    });
+
+                    row.style.display = showRow ? '' : 'none';
+                });
+            }
 
             deductionsContent.appendChild(filterSection);
 
