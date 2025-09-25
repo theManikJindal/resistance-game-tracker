@@ -569,15 +569,53 @@
             </div>
         </div>
     </div>
-    <div class="game-log" id="game-log">
-        <h2>Game Log</h2>
-    </div>
     <div class="deductions" id="deductions">
         <h2>Spy Deductions</h2>
         <div class="deductions-content"></div>
     </div>
+    <div class="game-log" id="game-log">
+        <h2>Game Log</h2>
+    </div>
+    <div class="end-game-container" id="end-game-container"></div>
 
     <style>
+        .end-game-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .end-game-button {
+            padding: 1.2rem 3rem;
+            font-size: 1.2rem;
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background-color: var(--danger-color) !important;
+        }
+
+        .end-game-button:hover {
+            background-color: #c0392b !important;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .end-game-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
         .deductions {
             margin: 2rem auto;
             max-width: 800px;
@@ -601,10 +639,16 @@
             color: var(--primary-color);
         }
 
+        .combinations-counter {
+            margin: 1rem 0;
+            padding: 0.5rem 0;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
         .spy-combinations-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1rem;
             background: white;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
@@ -631,14 +675,19 @@
             color: #666;
         }
 
-        .spy-combinations-table tr.possible td:nth-child(2) {
+        .spy-combinations-table tr.possible td:nth-child(3) {
             color: var(--success-color);
             font-weight: bold;
         }
 
-        .spy-combinations-table tr.impossible td:nth-child(2) {
+        .spy-combinations-table tr.impossible td:nth-child(3) {
             color: var(--danger-color);
             font-weight: bold;
+        }
+
+        .spy-combinations-table td:nth-child(1),
+        .spy-combinations-table td:nth-child(2) {
+            min-width: 200px;
         }
 
         .spy-combinations-table tr.impossible td:last-child {
@@ -654,10 +703,47 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
+        .mode-selector {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f0f9ff;
+            border-radius: var(--border-radius);
+            border: 1px solid #bde3ff;
+        }
+
+        .mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            user-select: none;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .mode-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
         .spy-filter h3 {
             margin-bottom: 0.5rem;
             color: var(--primary-color);
             font-size: 1rem;
+        }
+
+        .filter-section {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+        }
+
+        .filter-section h4 {
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+            font-size: 0.9rem;
         }
 
         .player-checkboxes {
@@ -666,49 +752,39 @@
             gap: 1rem;
         }
 
-        .player-filter-item {
+        .player-checkbox {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.5rem;
             padding: 0.5rem;
-            background: #f5f5f5;
             border-radius: var(--border-radius);
-            user-select: none;
-        }
-
-        .player-name {
-            min-width: 100px;
-        }
-
-        .filter-radio-group {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .filter-radio-label {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
             cursor: pointer;
-            padding: 0.25rem 0.5rem;
-            border-radius: var(--border-radius);
+            user-select: none;
             transition: background-color 0.2s ease;
         }
 
-        .filter-radio-label:hover {
-            background: rgba(0, 0, 0, 0.05);
+        .player-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
         }
 
-        .filter-radio-label.exclude {
-            color: var(--danger-color);
+        /* Spy checkbox styling */
+        .spy-checkbox {
+            background: #ffe8e8;
         }
 
-        .filter-radio-label.include {
-            color: var(--secondary-color);
+        .spy-checkbox:hover {
+            background: #ffd1d1;
         }
 
-        .filter-radio-label input[type="radio"] {
-            margin: 0;
+        /* Resistance checkbox styling */
+        .resistance-checkbox {
+            background: #e8f4ff;
+        }
+
+        .resistance-checkbox:hover {
+            background: #d1e9ff;
         }
     </style>
 
@@ -842,6 +918,8 @@
                 selectedTeam: Array.from(gameState.selectedTeam)
             };
             localStorage.setItem('resistanceGameState', JSON.stringify(stateToSave));
+            // Always save player names separately
+            savePlayerNames();
         }
 
         // Load game state from local storage
@@ -851,9 +929,17 @@
                 const parsedState = JSON.parse(savedState);
                 // Ensure selectedTeam is always a Set
                 parsedState.selectedTeam = new Set(Array.isArray(parsedState.selectedTeam) ? parsedState.selectedTeam : []);
+                // Ensure roundHistory exists
+                parsedState.roundHistory = parsedState.roundHistory || [];
                 Object.assign(gameState, parsedState);
-                renderGame();
+            } else {
+                // If no game state, at least load saved players
+                const savedPlayers = loadPlayerNames();
+                if (savedPlayers.length > 0) {
+                    gameState.players = savedPlayers;
+                }
             }
+            renderGame();
         }
 
         // Calculate positions for player boxes in a circle
@@ -1244,65 +1330,128 @@
             const filterSection = document.createElement('div');
             filterSection.className = 'spy-filter';
             filterSection.innerHTML = `
-                <h3>Filter by Player</h3>
-                <div class="player-checkboxes">
-                    ${gameState.players.map(player => `
-                        <div class="player-filter-item">
-                            <span class="player-name">${player}</span>
-                            <div class="filter-radio-group">
-                                <label class="filter-radio-label exclude">
-                                    <input type="radio" name="filter-${player}" value="exclude">
-                                    Red
-                                </label>
-                                <label class="filter-radio-label">
-                                    <input type="radio" name="filter-${player}" value="neutral" checked>
-                                    Unknown
-                                </label>
-                                <label class="filter-radio-label include">
-                                    <input type="radio" name="filter-${player}" value="include">
-                                    Blue
-                                </label>
-                            </div>
-                        </div>
-                    `).join('')}
+                <div class="mode-selector">
+                    <label class="mode-toggle">
+                        <input type="checkbox" id="team-selection-mode">
+                        <span>Team Selection Mode (show only possible combinations)</span>
+                    </label>
+                </div>
+                <h3>Pin Players' Roles</h3>
+                <div class="filter-section">
+                    <h4>Pin as Red (only show combinations where these players are spies):</h4>
+                    <div class="player-checkboxes">
+                        ${gameState.players.map(player => `
+                            <label class="player-checkbox spy-checkbox">
+                                <input type="checkbox" class="spy-filter" value="${player}">
+                                ${player}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <h4>Pin as Blue (only show combinations where these players are NOT spies):</h4>
+                    <div class="player-checkboxes">
+                        ${gameState.players.map(player => `
+                            <label class="player-checkbox resistance-checkbox">
+                                <input type="checkbox" class="resistance-filter" value="${player}">
+                                ${player}
+                            </label>
+                        `).join('')}
+                    </div>
                 </div>
             `;
 
             // Add filter event listeners
-            const radioGroups = filterSection.querySelectorAll('.filter-radio-group');
+            const spyCheckboxes = filterSection.querySelectorAll('input.spy-filter');
+            const resistanceCheckboxes = filterSection.querySelectorAll('input.resistance-filter');
             
-            radioGroups.forEach(group => {
-                const radios = group.querySelectorAll('input[type="radio"]');
-                radios.forEach(radio => {
-                    radio.addEventListener('change', updateTableVisibility);
-                });
-            });
-
             function updateTableVisibility() {
-                const rows = table.querySelectorAll('tr:not(:first-child)');
+                // Get checked players for both filters
+                const spyPlayers = Array.from(spyCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
                 
+                const resistancePlayers = Array.from(resistanceCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+
+                const teamSelectionMode = document.getElementById('team-selection-mode').checked;
+
+                // Show/hide rows based on filters
+                const rows = table.querySelectorAll('tr:not(:first-child)');
+                let visibleRows = 0;
+
                 rows.forEach(row => {
                     const spies = row.querySelector('td').textContent.split(', ');
-                    let showRow = true;
-
-                    // Check each player's radio selection
-                    gameState.players.forEach(player => {
-                        const selectedRadio = filterSection.querySelector(`input[name="filter-${player}"]:checked`);
-                        const state = selectedRadio.value;
-                        const isPlayerInCombo = spies.includes(player);
-
-                        if (state === 'include' && isPlayerInCombo) {
-                            showRow = false;  // Blue: hide if player IS in the combo
-                        } else if (state === 'exclude' && !isPlayerInCombo) {
-                            showRow = false;  // Red: hide if player is NOT in the combo
-                        }
-                    });
-
+                    
+                    // Show row only if:
+                    // 1. All pinned spies ARE in this combination AND
+                    // 2. All pinned resistance are NOT in this combination AND
+                    // 3. If in team selection mode, combination must be possible
+                    const showRow = 
+                        // Must include all pinned spies
+                        spyPlayers.every(player => spies.includes(player)) &&
+                        // Must NOT include any pinned resistance
+                        !resistancePlayers.some(player => spies.includes(player)) &&
+                        // If in team selection mode, must be possible
+                        (!teamSelectionMode || row.classList.contains('possible'));
+                    
                     row.style.display = showRow ? '' : 'none';
+                    if (showRow) visibleRows++;
                 });
+
+                // Update the counter
+                const counterDiv = document.querySelector('.combinations-counter');
+                if (counterDiv) {
+                    const totalRows = rows.length;
+                    counterDiv.textContent = `Showing ${visibleRows} of ${totalRows} possible combinations`;
+                }
+
+                // Show or hide the no results message
+                let noResultsMessage = table.querySelector('.no-results-message');
+                if (visibleRows === 0 && (spyPlayers.length > 0 || resistancePlayers.length > 0)) {
+                    if (!noResultsMessage) {
+                        noResultsMessage = document.createElement('tr');
+                        noResultsMessage.className = 'no-results-message';
+                        const td = document.createElement('td');
+                        td.colSpan = 4;
+                        td.style.textAlign = 'center';
+                        td.style.padding = '2rem';
+                        td.innerHTML = `
+                            <div style="color: var(--danger-color); font-weight: bold;">
+                                This combination of players is not possible.
+                            </div>
+                            <div style="color: #666; margin-top: 0.5rem; font-size: 0.9rem;">
+                                Red Team: ${spyPlayers.join(', ') || 'None'}<br>
+                                Blue Team: ${resistancePlayers.join(', ') || 'None'}
+                            </div>
+                        `;
+                        noResultsMessage.appendChild(td);
+                        table.appendChild(noResultsMessage);
+                    }
+                } else if (noResultsMessage) {
+                    noResultsMessage.remove();
+                }
             }
 
+            // First append the filter section to the DOM
             deductionsContent.appendChild(filterSection);
+
+            // Now that the elements are in the DOM, add all event listeners
+            const teamSelectionCheckbox = document.getElementById('team-selection-mode');
+            if (teamSelectionCheckbox) {
+                teamSelectionCheckbox.addEventListener('change', updateTableVisibility);
+            }
+
+            // Add change listeners to all checkboxes
+            [...spyCheckboxes, ...resistanceCheckboxes].forEach(checkbox => {
+                checkbox.addEventListener('change', updateTableVisibility);
+            });
+
+            // Create counter div
+            const counterDiv = document.createElement('div');
+            counterDiv.className = 'combinations-counter';
+            deductionsContent.appendChild(counterDiv);
 
             // Create table
             const table = document.createElement('table');
@@ -1311,7 +1460,8 @@
             // Add header
             const header = document.createElement('tr');
             header.innerHTML = `
-                <th>Potential Spies</th>
+                <th>Red</th>
+                <th>Blue</th>
                 <th>Possible?</th>
                 <th>Reason if Impossible</th>
             `;
@@ -1321,8 +1471,12 @@
             spyPossibilities.forEach(combo => {
                 const row = document.createElement('tr');
                 row.className = combo.possible ? 'possible' : 'impossible';
+                // Calculate resistance members (players not in spy combo)
+                const resistanceMembers = gameState.players.filter(player => !combo.spies.includes(player));
+                
                 row.innerHTML = `
                     <td>${combo.spies.join(', ')}</td>
+                    <td>${resistanceMembers.join(', ')}</td>
                     <td>${combo.possible ? '✓' : '✗'}</td>
                     <td>${combo.reason}</td>
                 `;
@@ -1459,7 +1613,7 @@
 
             if (gameState.currentMission > 5) {
                 alert('Game Over!');
-                resetGame();
+                endGame();
             } else {
                 saveGameState();
                 renderGame();
@@ -1480,8 +1634,8 @@
             return [];
         }
 
-        // Reset game but keep players
-        function resetGame() {
+        // End current game and return to setup
+        function endGame() {
             const savedPlayers = [...gameState.players];
             // Reset to initial state
             Object.assign(gameState, {
@@ -1489,14 +1643,83 @@
                 players: savedPlayers,
                 leader: null,
                 currentMission: 1,
-                currentTeam: 0,
+                currentTeam: 1,
                 selectedTeam: new Set(),
                 votes: {},
-                missionResults: []
+                missionResults: [],
+                roundHistory: [],
+                isVoting: false
             });
             saveGameState();
-            savePlayerNames(); // Save players separately
             renderGame();
+            renderGameLog();
+            renderDeductions();
+        }
+
+        // Update center content based on game state
+        function updateCenterContent() {
+            centerContent.innerHTML = '';
+            if (gameState.phase === 'setup') {
+                // Create input group if we're in setup phase and have less than 10 players
+                if (gameState.players.length < 10) {
+                    const inputGroup = document.createElement('div');
+                    inputGroup.className = 'input-group';
+                    inputGroup.innerHTML = `
+                        <input type="text" id="player-name" placeholder="Enter player name">
+                        <button id="add-player">Add Player</button>
+                    `;
+                    centerContent.appendChild(inputGroup);
+                }
+
+                if (gameState.players.length >= 5) {
+                    if (!gameState.leader) {
+                        const leaderText = document.createElement('p');
+                        leaderText.textContent = 'Select leader';
+                        centerContent.appendChild(leaderText);
+                    }
+
+                    if (gameState.leader) {
+                        const startButton = document.createElement('button');
+                        startButton.textContent = 'Start Game';
+                        startButton.onclick = startGame;
+                        startButton.className = 'primary-button';
+                        centerContent.appendChild(startButton);
+
+                        // Make add player button secondary if it exists
+                        const addPlayerButton = document.getElementById('add-player');
+                        if (addPlayerButton) {
+                            addPlayerButton.className = 'secondary-button';
+                        }
+                    } else {
+                        // Ensure add player button is primary when no leader is selected
+                        const addPlayerButton = document.getElementById('add-player');
+                        if (addPlayerButton) {
+                            addPlayerButton.className = 'primary-button';
+                        }
+                    }
+                }
+            } else if (gameState.phase === 'play') {
+                const requiredTeamSize = missionRequirements[gameState.players.length][gameState.currentMission - 1];
+                const failsNeeded = gameState.players.length >= 7 && gameState.currentMission === 4 ? 2 : 1;
+                
+                centerContent.innerHTML = `
+                    <p>Select team of ${requiredTeamSize} players. ${failsNeeded} fails needed</p>
+                `;
+
+                if (gameState.selectedTeam.size === requiredTeamSize) {
+                    const voteButton = document.createElement('button');
+                    voteButton.textContent = 'Vote on team';
+                    voteButton.onclick = () => {
+                        gameState.votes = {};
+                        gameState.isVoting = true;
+                        saveGameState();
+                        renderVotingControls();
+                    };
+                    centerContent.appendChild(voteButton);
+                }
+
+                // End game button is now handled in renderGame()
+            }
         }
 
         // Main render function
@@ -1509,6 +1732,22 @@
             updateCenterContent();
             setupEventListeners();
             renderDeductions();
+
+            // Update end game button
+            const endGameContainer = document.getElementById('end-game-container');
+            endGameContainer.innerHTML = '';
+            
+            if (gameState.phase === 'play') {
+                const endGameButton = document.createElement('button');
+                endGameButton.textContent = 'End Current Game';
+                endGameButton.className = 'end-game-button danger-button';
+                endGameButton.onclick = () => {
+                    if (confirm('Are you sure you want to end the current game?')) {
+                        endGame();
+                    }
+                };
+                endGameContainer.appendChild(endGameButton);
+            }
         }
 
         // Event Listeners
@@ -1549,13 +1788,22 @@
             }
         };
 
-        // Initialize game with saved players or start fresh
-        const savedPlayers = loadPlayerNames();
-        if (savedPlayers.length > 0) {
-            gameState.players = savedPlayers;
+        // Initialize game with saved state or start fresh
+        const savedState = localStorage.getItem('resistanceGameState');
+        if (savedState) {
+            // Load full game state
+            loadGameState();
+            // Make sure to render game log and deductions
+            renderGameLog();
+            renderDeductions();
+        } else {
+            // If no game state, try to load just the players
+            const savedPlayers = loadPlayerNames();
+            if (savedPlayers.length > 0) {
+                gameState.players = savedPlayers;
+            }
+            renderGame();
         }
-        localStorage.removeItem('resistanceGameState'); // Clear game progress but keep players
-        renderGame();
     </script>
 </body>
 </html>
