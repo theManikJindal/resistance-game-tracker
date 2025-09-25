@@ -139,6 +139,16 @@
             z-index: 1;
         }
 
+        .player-box.possible-blue {
+            background-color: #e8f5e9;
+            border-color: #2e7d32;
+        }
+
+        .player-box.must-have-red {
+            background-color: #ffebee;
+            border-color: #c62828;
+        }
+
         @media (max-width: 768px) {
             .player-box-container {
                 position: relative;
@@ -482,9 +492,10 @@
 
         .game-log {
             margin-top: 2rem;
-            width: 100%;
-            max-width: 800px;
             padding: 1rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .game-log h2 {
@@ -646,8 +657,18 @@
             font-weight: 500;
         }
 
-        .spy-combinations-table {
+        /* Set consistent width for all main sections */
+        .spy-combinations-table,
+        .spy-filter,
+        .game-log,
+        .deductions {
             width: 100%;
+            max-width: 1200px; /* Increased from 800px to accommodate the wider table */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .spy-combinations-table {
             border-collapse: collapse;
             background: white;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -690,6 +711,11 @@
             min-width: 200px;
         }
 
+        .spy-combinations-table td:nth-child(5) {
+            min-width: 250px;
+            max-width: 300px;
+        }
+
         .spy-combinations-table tr.impossible td:last-child {
             font-style: italic;
             color: #666;
@@ -701,6 +727,7 @@
             background: white;
             border-radius: var(--border-radius);
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            width: 100%;
         }
 
         .mode-selector {
@@ -709,6 +736,9 @@
             background: #f0f9ff;
             border-radius: var(--border-radius);
             border: 1px solid #bde3ff;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
         }
 
         .mode-toggle {
@@ -719,6 +749,13 @@
             user-select: none;
             color: var(--primary-color);
             font-weight: 500;
+            padding: 0.25rem;
+            transition: background-color 0.2s ease;
+            border-radius: var(--border-radius);
+        }
+
+        .mode-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.5);
         }
 
         .mode-toggle input[type="checkbox"] {
@@ -801,7 +838,8 @@
             missionResults: [],
             roundHistory: [],
             isVoting: false,
-            impossibleSpyGroups: [] // Store groups that can't all be spies
+            impossibleSpyGroups: [], // Store groups that can't all be spies
+            showMissionHistory: true // Default to showing mission history
         };
 
         // Get number of spies based on player count
@@ -1028,6 +1066,22 @@
                     };
                 }
 
+                // Show possibility during team selection phase
+                if (gameState.phase === 'play' && !gameState.isVoting && !gameState.selectedTeam.has(player)) {
+                    const requiredTeamSize = missionRequirements[gameState.players.length][gameState.currentMission - 1];
+                    if (gameState.selectedTeam.size < requiredTeamSize) {
+                        // Create a potential team with this player
+                        const potentialTeam = new Set(gameState.selectedTeam);
+                        potentialTeam.add(player);
+                        
+                        // Check if this team could be all blue
+                        const isPossible = checkTeamPossibility(Array.from(potentialTeam));
+                        
+                        // Apply appropriate class
+                        playerBox.classList.add(isPossible ? 'possible-blue' : 'must-have-red');
+                    }
+                }
+
                 playerBox.onclick = (e) => {
                     // Don't handle click if it's on the voting controls or if we're in voting phase
                     if (e.target.closest('.player-vote-controls') || gameState.isVoting) return;
@@ -1104,6 +1158,19 @@
             });
         }
 
+        // Check if a team selection could be all blue based on deductions
+        function checkTeamPossibility(selectedPlayers) {
+            const spyPossibilities = calculateSpyPossibilities();
+            if (!spyPossibilities) return true; // If no deductions yet, all teams are possible
+
+            // A team is possible if there exists at least one spy combination where none of the selected players are spies
+            return spyPossibilities.some(combo => {
+                if (!combo.possible) return false;
+                // Check if any of the selected players are in this spy combination
+                return !selectedPlayers.some(player => combo.spies.includes(player));
+            });
+        }
+
         // Handle player box clicks based on game phase
         function handlePlayerClick(player) {
             if (gameState.phase === 'setup') {
@@ -1117,6 +1184,10 @@
                 if (gameState.selectedTeam.has(player)) {
                     gameState.selectedTeam.delete(player);
                 } else if (gameState.selectedTeam.size < requiredTeamSize) {
+                    // Create a new Set with the potential team
+                    const potentialTeam = new Set(gameState.selectedTeam);
+                    potentialTeam.add(player);
+                    
                     gameState.selectedTeam.add(player);
                 }
             }
@@ -1335,6 +1406,10 @@
                         <input type="checkbox" id="team-selection-mode">
                         <span>Team Selection Mode (show only possible combinations)</span>
                     </label>
+                    <label class="mode-toggle">
+                        <input type="checkbox" id="show-mission-history" ${gameState.showMissionHistory ? 'checked' : ''}>
+                        <span>Show 2+ Reds on Mission</span>
+                    </label>
                 </div>
                 <h3>Pin Players' Roles</h3>
                 <div class="filter-section">
@@ -1439,8 +1514,19 @@
 
             // Now that the elements are in the DOM, add all event listeners
             const teamSelectionCheckbox = document.getElementById('team-selection-mode');
+            const missionHistoryCheckbox = document.getElementById('show-mission-history');
+            
             if (teamSelectionCheckbox) {
                 teamSelectionCheckbox.addEventListener('change', updateTableVisibility);
+            }
+
+            if (missionHistoryCheckbox) {
+                missionHistoryCheckbox.addEventListener('change', (e) => {
+                    gameState.showMissionHistory = e.target.checked;
+                    saveGameState();
+                    // Re-render the entire deductions section to rebuild the table
+                    renderDeductions();
+                });
             }
 
             // Add change listeners to all checkboxes
@@ -1459,11 +1545,13 @@
             
             // Add header
             const header = document.createElement('tr');
+            const showMissionHistory = gameState.showMissionHistory;
             header.innerHTML = `
                 <th>Red</th>
                 <th>Blue</th>
                 <th>Possible?</th>
                 <th>Reason if Impossible</th>
+                ${showMissionHistory ? '<th>2+ Reds on Mission</th>' : ''}
             `;
             table.appendChild(header);
 
@@ -1474,11 +1562,46 @@
                 // Calculate resistance members (players not in spy combo)
                 const resistanceMembers = gameState.players.filter(player => !combo.spies.includes(player));
                 
+                // Generate mission history for this spy combination
+                let missionHistory = '';
+                gameState.roundHistory.forEach(round => {
+                    if (round.approved) {
+                        // Count spies on this mission for this combination
+                        const spiesOnMission = round.proposedTeam.filter(player => 
+                            combo.spies.includes(player)
+                        );
+                        
+                        if (spiesOnMission.length > 1) {
+                            const failsNeeded = gameState.players.length >= 7 && round.mission === 4 ? 2 : 1;
+                            const missionResult = round.fails !== null ? 
+                                (round.fails >= failsNeeded ? 'Failed' : 'Passed') : 
+                                'Pending';
+                            
+                            missionHistory += `
+                                <div style="margin-bottom: 0.5rem;">
+                                    <strong>Mission ${round.mission}</strong> (Leader: ${round.leader})<br>
+                                    ${spiesOnMission.length} reds on team: ${spiesOnMission.join(', ')}<br>
+                                    Result: <span style="color: ${missionResult === 'Failed' ? 'var(--danger-color)' : 
+                                                         missionResult === 'Passed' ? 'var(--success-color)' : 
+                                                         'var(--primary-color)'}">
+                                        ${missionResult}
+                                    </span>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+
+                if (!missionHistory) {
+                    missionHistory = '<em style="color: #666">No missions with multiple reds</em>';
+                }
+
                 row.innerHTML = `
                     <td>${combo.spies.join(', ')}</td>
                     <td>${resistanceMembers.join(', ')}</td>
                     <td>${combo.possible ? '✓' : '✗'}</td>
                     <td>${combo.reason}</td>
+                    ${showMissionHistory ? `<td>${missionHistory}</td>` : ''}
                 `;
                 table.appendChild(row);
             });
@@ -1702,13 +1825,38 @@
                 const requiredTeamSize = missionRequirements[gameState.players.length][gameState.currentMission - 1];
                 const failsNeeded = gameState.players.length >= 7 && gameState.currentMission === 4 ? 2 : 1;
                 
-                centerContent.innerHTML = `
-                    <p>Select team of ${requiredTeamSize} players. ${failsNeeded} fails needed</p>
-                `;
+                // Create main instruction
+                const instruction = document.createElement('p');
+                instruction.textContent = `Select team of ${requiredTeamSize} players. ${failsNeeded} fails needed`;
+                centerContent.appendChild(instruction);
 
+                // Show selected team and possibility status
+                if (gameState.selectedTeam.size > 0) {
+                    const selectedPlayers = Array.from(gameState.selectedTeam);
+                    const isPossible = checkTeamPossibility(selectedPlayers);
+                    
+                    const teamStatus = document.createElement('div');
+                    teamStatus.style.marginTop = '1rem';
+                    teamStatus.style.padding = '1rem';
+                    teamStatus.style.borderRadius = 'var(--border-radius)';
+                    teamStatus.style.backgroundColor = isPossible ? '#e8f5e9' : '#ffebee';
+                    teamStatus.style.color = isPossible ? '#2e7d32' : '#c62828';
+                    teamStatus.style.fontWeight = '500';
+                    
+                    teamStatus.innerHTML = `
+                        <div style="margin-bottom: 0.5rem;">Selected: ${selectedPlayers.join(', ')}</div>
+                        <div>${isPossible ? 
+                            '✓ This team could be all blue' : 
+                            '⚠️ This team must include at least one red'}</div>
+                    `;
+                    centerContent.appendChild(teamStatus);
+                }
+
+                // Add vote button if team is complete
                 if (gameState.selectedTeam.size === requiredTeamSize) {
                     const voteButton = document.createElement('button');
                     voteButton.textContent = 'Vote on team';
+                    voteButton.style.marginTop = '1rem';
                     voteButton.onclick = () => {
                         gameState.votes = {};
                         gameState.isVoting = true;
